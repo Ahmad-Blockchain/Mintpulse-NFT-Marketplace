@@ -1,0 +1,518 @@
+# ============================================================
+# MintPulse NFT Marketplace - Manual API Test Suite
+# VS Code REST Client
+#
+# Backend: http://localhost:5000
+# API prefix: /api
+#
+# Prerequisites:
+# 1. MySQL running
+# 2. Hardhat node running on 127.0.0.1:8545
+# 3. Backend running on localhost:5000
+# 4. VS Code REST Client extension installed
+#
+# IMPORTANT:
+# - Replace {{token}} with a REAL JWT after completing auth.
+# - Replace {{adminToken}} with a REAL admin JWT for admin testing.
+# - IDs such as 1 must exist in your local database before testing
+#   resource-specific endpoints.
+# ============================================================
+
+@baseUrl = http://localhost:5000/api
+@healthUrl = http://localhost:5000
+
+# Hardhat account used in the audit report
+@wallet = 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC
+
+# Replace after authentication
+@token = REPLACE_WITH_REAL_JWT
+@adminToken = REPLACE_WITH_REAL_ADMIN_JWT
+
+# Replace with a real transaction hash when testing that endpoint
+@txHash = REPLACE_WITH_REAL_TRANSACTION_HASH
+
+# Replace with real existing IDs when required
+@userWallet = {{wallet}}
+@nftId = 1
+@listingId = 1
+@offerId = 1
+@auctionId = 1
+
+
+# ============================================================
+# 01 - HEALTH
+# ============================================================
+
+### 01. Health - expected 200
+GET {{healthUrl}}/health
+
+
+# ============================================================
+# 02 - AUTHENTICATION
+# ============================================================
+
+### 02. Get nonce - valid wallet
+POST {{baseUrl}}/auth/nonce
+Content-Type: application/json
+
+{
+  "walletAddress": "{{wallet}}"
+}
+
+
+### 03. Get nonce - invalid wallet
+POST {{baseUrl}}/auth/nonce
+Content-Type: application/json
+
+{
+  "walletAddress": "invalid-wallet"
+}
+
+
+### 04. Verify signature
+# IMPORTANT:
+# Replace REAL_SIGNATURE with the signature produced by the
+# project's actual wallet authentication flow.
+POST {{baseUrl}}/auth/verify
+Content-Type: application/json
+
+{
+  "walletAddress": "{{wallet}}",
+  "signature": "REAL_SIGNATURE"
+}
+
+
+### 05. Login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "walletAddress": "{{wallet}}"
+}
+
+
+### 06. Current authenticated user
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{token}}
+
+
+### 07. Auth - missing JWT
+GET {{baseUrl}}/auth/me
+
+
+### 08. Auth - invalid JWT
+GET {{baseUrl}}/auth/me
+Authorization: Bearer invalid.jwt.token
+
+
+# ============================================================
+# 03 - USERS
+# ============================================================
+
+### 09. Get all users
+GET {{baseUrl}}/users
+
+
+### 10. Get user by wallet
+GET {{baseUrl}}/users/{{userWallet}}
+
+
+### 11. Create user
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "walletAddress": "{{wallet}}"
+}
+
+
+### 12. Update user - authenticated
+PUT {{baseUrl}}/users/{{userWallet}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "username": "mintpulse_user",
+  "bio": "MintPulse NFT Collector"
+}
+
+
+### 13. Update user - missing JWT
+PUT {{baseUrl}}/users/{{userWallet}}
+Content-Type: application/json
+
+{
+  "username": "unauthorized_test"
+}
+
+
+# ============================================================
+# 04 - NFTs
+# ============================================================
+
+### 14. Get all NFTs
+GET {{baseUrl}}/nfts
+
+
+### 15. Get NFT by token ID
+GET {{baseUrl}}/nfts/{{nftId}}
+
+
+### 16. Get NFTs by owner
+GET {{baseUrl}}/nfts/owner/{{wallet}}
+
+
+### 17. Get NFTs by creator
+GET {{baseUrl}}/nfts/creator/{{wallet}}
+
+
+### 18. NFT - invalid token ID
+GET {{baseUrl}}/nfts/invalid-id
+
+
+# ============================================================
+# 05 - LISTINGS
+# ============================================================
+
+### 19. Get all listings
+GET {{baseUrl}}/listings
+
+
+### 20. Get listing
+GET {{baseUrl}}/listings/{{listingId}}
+
+
+### 21. Create listing
+# Use a real NFT owned by the authenticated wallet.
+POST {{baseUrl}}/listings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nftId": {{nftId}},
+  "price": "1.0"
+}
+
+
+### 22. Create listing - missing JWT
+POST {{baseUrl}}/listings
+Content-Type: application/json
+
+{
+  "nftId": {{nftId}},
+  "price": "1.0"
+}
+
+
+### 23. Create listing - invalid price
+POST {{baseUrl}}/listings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nftId": {{nftId}},
+  "price": "0"
+}
+
+
+### 24. Update listing
+PUT {{baseUrl}}/listings/{{listingId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "price": "2.0"
+}
+
+
+### 25. Update listing - missing JWT
+PUT {{baseUrl}}/listings/{{listingId}}
+Content-Type: application/json
+
+{
+  "price": "2.0"
+}
+
+
+### 26. Cancel listing
+DELETE {{baseUrl}}/listings/{{listingId}}
+Authorization: Bearer {{token}}
+
+
+### 27. Cancel listing - missing JWT
+DELETE {{baseUrl}}/listings/{{listingId}}
+
+
+# ============================================================
+# 06 - OFFERS
+# ============================================================
+
+### 28. Get all offers
+GET {{baseUrl}}/offers
+
+
+### 29. Create offer
+# Use a real NFT ID.
+POST {{baseUrl}}/offers
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nftId": {{nftId}},
+  "offerPrice": "0.5"
+}
+
+
+### 30. Create offer - missing JWT
+POST {{baseUrl}}/offers
+Content-Type: application/json
+
+{
+  "nftId": {{nftId}},
+  "offerPrice": "0.5"
+}
+
+
+### 31. Accept offer
+PUT {{baseUrl}}/offers/{{offerId}}/accept
+Authorization: Bearer {{token}}
+
+
+### 32. Cancel offer
+PUT {{baseUrl}}/offers/{{offerId}}/cancel
+Authorization: Bearer {{token}}
+
+
+# ============================================================
+# 07 - AUCTIONS
+# ============================================================
+
+### 33. Get all auctions
+GET {{baseUrl}}/auctions
+
+
+### 34. Create auction
+POST {{baseUrl}}/auctions
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nftId": {{nftId}},
+  "startingPrice": "1.0",
+  "duration": 86400
+}
+
+
+### 35. Create auction - missing JWT
+POST {{baseUrl}}/auctions
+Content-Type: application/json
+
+{
+  "nftId": {{nftId}},
+  "startingPrice": "1.0",
+  "duration": 86400
+}
+
+
+### 36. End auction
+PUT {{baseUrl}}/auctions/{{auctionId}}/end
+Authorization: Bearer {{token}}
+
+
+# ============================================================
+# 08 - BIDS
+# ============================================================
+
+### 37. Get all bids
+GET {{baseUrl}}/bids
+
+
+### 38. Create bid
+POST {{baseUrl}}/bids
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "auctionId": {{auctionId}},
+  "amount": "1.5"
+}
+
+
+### 39. Create bid - missing JWT
+POST {{baseUrl}}/bids
+Content-Type: application/json
+
+{
+  "auctionId": {{auctionId}},
+  "amount": "1.5"
+}
+
+
+# ============================================================
+# 09 - COLLECTIONS
+# ============================================================
+
+### 40. Get all collections
+GET {{baseUrl}}/collections
+
+
+# ============================================================
+# 10 - TRANSACTIONS
+# ============================================================
+
+### 41. Get all transactions
+GET {{baseUrl}}/transactions
+
+
+### 42. Get transaction by hash
+GET {{baseUrl}}/transactions/{{txHash}}
+
+
+# ============================================================
+# 11 - ACTIVITIES
+# ============================================================
+
+### 43. Get global activities
+GET {{baseUrl}}/activities
+
+
+# ============================================================
+# 12 - FAVORITES
+# ============================================================
+
+### 44. Toggle favorite
+POST {{baseUrl}}/favorites/toggle
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nftId": {{nftId}}
+}
+
+
+### 45. Toggle favorite - missing JWT
+POST {{baseUrl}}/favorites/toggle
+Content-Type: application/json
+
+{
+  "nftId": {{nftId}}
+}
+
+
+# ============================================================
+# 13 - NOTIFICATIONS
+# ============================================================
+
+### 46. Get notifications
+GET {{baseUrl}}/notifications
+Authorization: Bearer {{token}}
+
+
+### 47. Notifications - missing JWT
+GET {{baseUrl}}/notifications
+
+
+# ============================================================
+# 14 - SEARCH
+# ============================================================
+
+### 48. Search
+GET {{baseUrl}}/search?q=crypto
+
+
+### 49. Search - empty query
+GET {{baseUrl}}/search?q=
+
+
+# ============================================================
+# 15 - ANALYTICS
+# ============================================================
+
+### 50. Marketplace analytics / stats
+GET {{baseUrl}}/analytics/stats
+
+
+# ============================================================
+# 16 - ADMIN
+# ============================================================
+
+### 51. Get admin users
+GET {{baseUrl}}/admin/users
+Authorization: Bearer {{adminToken}}
+
+
+### 52. Admin - missing JWT
+GET {{baseUrl}}/admin/users
+
+
+### 53. Admin - invalid JWT
+GET {{baseUrl}}/admin/users
+Authorization: Bearer invalid.admin.jwt
+
+
+# ============================================================
+# 17 - NEGATIVE / 404 TESTS
+# ============================================================
+
+### 54. Non-existent endpoint
+GET {{baseUrl}}/this-endpoint-does-not-exist
+
+
+### 55. Non-existent NFT
+GET {{baseUrl}}/nfts/999999999
+
+
+### 56. Non-existent listing
+GET {{baseUrl}}/listings/999999999
+
+
+### 57. Non-existent offer
+GET {{baseUrl}}/offers/999999999
+
+
+# ============================================================
+# END OF MANUAL API TEST SUITE
+# ============================================================
+#
+# VERIFIED ROUTES FROM THE ANTIGRAVITY AUDIT:
+#
+# GET    /health
+# POST   /api/auth/nonce
+# POST   /api/auth/verify
+# POST   /api/auth/login
+# GET    /api/auth/me
+# GET    /api/users
+# GET    /api/users/:wallet
+# POST   /api/users
+# PUT    /api/users/:wallet
+# GET    /api/nfts
+# GET    /api/nfts/:tokenId
+# GET    /api/nfts/owner/:wallet
+# GET    /api/nfts/creator/:wallet
+# GET    /api/listings
+# GET    /api/listings/:id
+# POST   /api/listings
+# PUT    /api/listings/:id
+# DELETE /api/listings/:id
+# GET    /api/offers
+# POST   /api/offers
+# PUT    /api/offers/:id/accept
+# PUT    /api/offers/:id/cancel
+# GET    /api/auctions
+# POST   /api/auctions
+# PUT    /api/auctions/:id/end
+# GET    /api/bids
+# POST   /api/bids
+# GET    /api/collections
+# GET    /api/transactions
+# GET    /api/activities
+# POST   /api/favorites/toggle
+# GET    /api/notifications
+# GET    /api/search
+# GET    /api/analytics/stats
+# GET    /api/admin/users
+#
+# Total verified route definitions in the audit: 35
+# (Some routes have additional negative/auth test cases above.)
+#
+# ============================================================
